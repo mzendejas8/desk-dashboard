@@ -1,0 +1,57 @@
+:root {
+  --bg: #11111b;
+  --card: #1e1e2e;
+  --text: #cdd6f4;
+  --muted: #7f849c;
+  --accent: #89b4fa;
+  --radius: 16px;
+  --gap: 20px;
+}
+
+* { box-sizing: border-box; margin: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "JetBrainsMono Nerd Font", "JetBrains Mono", ui-monospace, monospace;
+  min-height: 100vh;
+  padding: var(--gap);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: var(--gap);
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 24px;
+}
+
+.muted { color: var(--muted); }
+.error { color: #f38ba8; }
+
+/* Clock */
+.card--clock { grid-column: 1 / -1; text-align: center; }
+.clock__time { font-size: clamp(4rem, 12vw, 9rem); font-weight: 700; line-height: 1; }
+.clock__date { font-size: 1.5rem; color: var(--muted); margin-top: 8px; }
+
+/* Weather — class names for you to use in Widgets.weather.render() */
+.weather__temp { font-size: 4rem; font-weight: 700; }
+.weather__desc { font-size: 1.4rem; color: var(--accent); }
+.weather__range { color: var(--muted); margin-top: 8px; }
+
+/* Pomodoro */
+.card--pomodoro { text-align: center; transition: background 0.3s; }
+.pomo__mode { font-size: 1.4rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; }
+.pomo__time { font-size: 4.5rem; font-weight: 700; margin: 8px 0 16px; }
+.pomo__buttons { display: flex; gap: 12px; justify-content: center; margin-bottom: 12px; }
+.pomo__buttons button {
+  background: var(--accent); color: var(--bg); border: 0; border-radius: 10px;
+  padding: 10px 22px; font: inherit; font-weight: 700; cursor: pointer;
+}
+.pomo__buttons .pomo__reset { background: transparent; color: var(--muted); border: 1px solid var(--muted); }
+.pomo--break { background: #1e2e24; }
+.pomo--break .pomo__mode { color: #a6e3a1; }

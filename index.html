@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Desk Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="grid">
+    <!-- Each card has a data-widget name. app.js finds it and starts the matching widget. -->
+    <section class="card card--clock" data-widget="clock"></section>
+    <section class="card card--weather" data-widget="weather">
+      <p class="muted">Loading weather…</p>
+    </section>
+    <section class="card card--pomodoro" data-widget="pomodoro"></section>
+
+    <!-- Future widgets — uncomment as you build them:
+    <section class="card" data-widget="nowPlaying"></section>
+    <section class="card" data-widget="calendar"></section>
+    -->
+  </main>
+
+  <!-- Order matters: config first, then widgets (they register themselves), then app.js starts them. -->
+  <script src="config.js"></script>
+  <script src="widgets/clock.js"></script>
+  <script src="widgets/weather.js"></script>
+  <script src="widgets/pomodoro.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
