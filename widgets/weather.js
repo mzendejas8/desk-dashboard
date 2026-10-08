@@ -71,7 +71,13 @@ Widgets.weather = {
   // Round the temps — Math.round(). Use describeWeatherCode() for the text.
   // Stuck on the shape of `data`? console.log(data) and look in DevTools.
   render(data) {
-    // TODO: implement
+    const temp = Math.round(data.current.temperature_2m)
+    const desc = describeWeatherCode(data.current.weather_code)
+    const high = Math.round(data.daily.temperature_2m_max[0])
+    const low = Math.round(data.daily.temperature_2m_min[0])
+    this.el.innerHTML= `<div class ="weather__temp">${temp}</div>
+                        <div class ="weather__desc">${desc}</div>
+                        <div class ="weather__range">H ${high} · L ${low}</div>`;
   },
 };
 
@@ -81,7 +87,8 @@ Widgets.weather = {
 //   describeWeatherCode(3)   → "Overcast"
 //   describeWeatherCode(999) → "Unknown"
 function describeWeatherCode(code) {
-  // TODO: implement
+
+ return WEATHER_CODES[code] ?? "Unknown";
 }
 
 // TODO 2: buildWeatherUrl(config)
@@ -99,7 +106,17 @@ function describeWeatherCode(code) {
 // handles the ?, &, and encoding for you.
 // Check yourself: paste the URL it returns into your browser. You should see JSON.
 function buildWeatherUrl(config) {
-  // TODO: implement
+  const baseurl = "https://api.open-meteo.com/v1/forecast";
+  const params ={latitude: config.latitude,
+                  longitude: config.longitude,
+                  current:"temperature_2m,weather_code",
+                  daily: "temperature_2m_max,temperature_2m_min",
+                  temperature_unit: config.units,
+                  timezone: "auto",
+                  forecast_days : 1
+  };
+  const query = new URLSearchParams(params);
+  return `${baseurl}?${query}`;
 }
 
 // TODO 3: async fetchWeather(url)
@@ -109,5 +126,8 @@ function buildWeatherUrl(config) {
 // yourself (include response.status in the message). refresh() catches it
 // and shows "Weather unavailable".
 async function fetchWeather(url) {
-  // TODO: implement
+ const response = await fetch(url);
+ if(!response.ok){throw new Error(`Weather request failed: ${response.status}`)} 
+  const data = await response.json();
+  return data;
 }

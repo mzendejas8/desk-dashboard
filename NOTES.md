@@ -19,10 +19,12 @@ Started 2026-10-06. Fun/simple public GitHub project, one widget per session.
    - [ ] notes listed on the card
    - [ ] ✕ deletes a note
    - [ ] survives refresh (localStorage)
-3. Weather (TODOs 1–4 in `widgets/weather.js`)
+3. Weather (TODOs 1–4 in `widgets/weather.js`) ✅ done 2026-10-08
+   - [ ] Show the city name on the card (quick: `city` label in config.js)
 4. Push to GitHub + live demo (GitHub Pages) + screenshot in README → tag v1.0
 
 **v1.1+ — don't touch until v1.0 is tagged**
+- Weather: set city name in config, look up coordinates via Open-Meteo geocoding API (chains two API calls)
 - Calendar widget: read-only today's events (Google OAuth in browser)
 - Note → calendar event button
 - Notes v2: click to edit, Enter to add, colors, pin

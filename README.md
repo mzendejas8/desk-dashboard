@@ -25,7 +25,7 @@ Adding a widget = one new file in `widgets/`, one `<script>` tag, one card.
 | Widget | Status | Data source |
 | --- | --- | --- |
 | Clock | ✅ | Browser |
-| Weather | 🚧 | [Open-Meteo](https://open-meteo.com/) (no key) |
+| Weather | ✅ | [Open-Meteo](https://open-meteo.com/) (no key) |
 | Pomodoro | ✅ | Browser |
 | Now playing | Planned | Spotify |
 | Calendar | Planned | Google Calendar |
