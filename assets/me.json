@@ -1,0 +1,26 @@
+{
+  "frameWidth": 118,
+  "frameHeight": 183,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 6
+    },
+    "walkRight": {
+      "row": 1,
+      "frames": 8
+    },
+    "walkLeft": {
+      "row": 2,
+      "frames": 8
+    },
+    "drinkStand": {
+      "row": 3,
+      "frames": 7
+    },
+    "drinkWalk": {
+      "row": 4,
+      "frames": 7
+    }
+  }
+}

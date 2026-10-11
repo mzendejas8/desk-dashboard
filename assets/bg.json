@@ -1,0 +1,35 @@
+{
+  "tile": {
+    "width": 128,
+    "height": 320,
+    "feetY": 307
+  },
+  "desk": {
+    "width": 202,
+    "height": 213
+  },
+  "coffee": {
+    "width": 130,
+    "height": 218
+  },
+  "window": {
+    "width": 167,
+    "height": 192
+  },
+  "whiteboard": {
+    "width": 115,
+    "height": 101
+  },
+  "plant": {
+    "width": 73,
+    "height": 178
+  },
+  "clock": {
+    "width": 50,
+    "height": 50
+  },
+  "poster": {
+    "width": 44,
+    "height": 60
+  }
+}

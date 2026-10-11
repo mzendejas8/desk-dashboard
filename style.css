@@ -35,7 +35,7 @@ body {
 
 /* Clock */
 .card--clock { grid-column: 1 / -1; text-align: center; }
-.clock__time { font-size: clamp(4rem, 12vw, 9rem); font-weight: 700; line-height: 1; }
+.clock__time { font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 700; line-height: 1; }
 .clock__date { font-size: 1.5rem; color: var(--muted); margin-top: 8px; }
 
 /* Weather — class names for you to use in Widgets.weather.render() */
@@ -55,3 +55,7 @@ body {
 .pomo__buttons .pomo__reset { background: transparent; color: var(--muted); border: 1px solid var(--muted); }
 .pomo--break { background: #1e2e24; }
 .pomo--break .pomo__mode { color: #a6e3a1; }
+
+/* Coffee walker */
+.card--walker { grid-column: 1 / -1; padding: 16px 24px; }
+.walker__canvas { display: block; width: 100%; image-rendering: pixelated; }
