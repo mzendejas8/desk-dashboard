@@ -27,6 +27,8 @@
 
   <!-- Order matters: config first, then widgets (they register themselves), then app.js starts them. -->
   <script src="config.js"></script>
+  <!-- config.js is gitignored, so the public site (GitHub Pages) doesn't have it: use the example values there. -->
+  <script>if (typeof CONFIG === "undefined") document.write('<script src="config.example.js"><\/script>');</script>
   <script src="widgets/clock.js"></script>
   <script src="widgets/weather.js"></script>
   <script src="widgets/pomodoro.js"></script>
