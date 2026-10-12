@@ -7,6 +7,8 @@
 //   4. switchState()  — the state machine: go to the next state in STATES
 //   5. drawScene()    — the background: tile the wall, place the desk + coffee
 //
+// Digital wall clock (added 2026-10-11): TODOs 6–8, at the bottom of the file.
+//
 // start(), load(), resize(), tick(), draw(), drawSprite() are finished.
 // Read tick() first: it calls your functions in order, ~8 times a second.
 //
@@ -39,7 +41,6 @@ const WALKER_STATES = {
 // top = pixels down from the top of the canvas, or floor: true to stand on the floor.
 const WALKER_DECOR = [
   { name: "window", x: 0.28, top: 22 },
-  { name: "clock", x: 0.43, top: 30 },
   { name: "whiteboard", x: 0.55, top: 42 },
   { name: "poster", x: 0.7, top: 50 },
   { name: "plant", x: 0.82, floor: true },
@@ -48,6 +49,51 @@ const WALKER_DECOR = [
 const WALKER_SCALE = 0.5; // sheet frames are ~118×183, draw them at half size
 const WALKER_SPEED = 4;   // pixels per tick while walking
 const WALKER_TICK_MS = 80;  // lower = faster (legs and steps together)
+
+// Digital clock: where it hangs (same units as WALKER_DECOR) and its colors.
+const CLOCK_SPOT = { x: 0.43, top: 12 };
+const CLOCK_ON = "#39ff6a";   // lit segment
+const CLOCK_OFF = "#16301e";  // unlit segment (real LED clocks show these faintly)
+
+// One digit is 8×14 canvas pixels. Each segment is a rectangle inside it:
+// [x, y, width, height], measured from the digit's top-left corner.
+//
+//    aaaa
+//   f    b
+//   f    b
+//    gggg
+//   e    c
+//   e    c
+//    dddd
+const CLOCK_SEGMENTS = {
+  a: [2, 0, 4, 2],
+  b: [6, 2, 2, 4],
+  c: [6, 8, 2, 4],
+  d: [2, 12, 4, 2],
+  e: [0, 8, 2, 4],
+  f: [0, 2, 2, 4],
+  g: [2, 6, 4, 2],
+};
+
+// Which segments light up for each digit. (A space isn't in here: nothing lit.)
+const CLOCK_DIGITS = {
+  0: "abcdef", 1: "bc", 2: "abdeg", 3: "abcdg", 4: "bcfg",
+  5: "acdfg", 6: "acdefg", 7: "abc", 8: "abcdefg", 9: "abcdfg",
+};
+
+const CLOCK_DIGIT_W = 8;  // width of one digit
+const CLOCK_COLON_W = 2;  // width of the colon
+const CLOCK_GAP = 3;      // space after every character
+const CLOCK_PAD = 5;      // space between the case edge and the digits
+const CLOCK_SCALE = 2;    // draw the whole clock this many times bigger (whole numbers stay crisp)
+
+// Tiny pixel letters for AM/PM, 5 rows tall: "1" = lit pixel.
+const CLOCK_LETTERS = {
+  A: ["010", "101", "111", "101", "101"],
+  P: ["111", "101", "111", "100", "100"],
+  M: ["10001", "11011", "10101", "10001", "10001"],
+};
+const CLOCK_AMPM_W = 3 + 1 + 5;  // "A"/"P" + 1px gap + "M"
 
 Widgets.walker = {
   start(el) {
@@ -190,6 +236,7 @@ Widgets.walker = {
     }
     ctx.drawImage(desk.img, this.props.deskX, this.props.deskY, desk.w, desk.h);
     ctx.drawImage(coffee.img, this.props.coffeeX, this.props.coffeeY, coffee.w, coffee.h);
+    this.drawClock();
   },
 
   // FINISHED: copy one cell of the sheet onto the canvas at x.
@@ -271,5 +318,116 @@ Widgets.walker = {
     this.frame = 0;
     const next = WALKER_STATES[this.state];
     if (next.wait) this.wait = next.wait;
+  },
+
+  // ---- Digital wall clock -------------------------------------------------
+  // drawScene() calls drawClock() every tick, so it's always current.
+
+  // FINISHED: draw the clock's case and return its box { x, y, w, h }.
+  // The case is sized to fit 4 digits + a colon + AM/PM.
+  // It also moves and scales the canvas so (0, 0) is the case's corner and
+  // every clock pixel is CLOCK_SCALE screen pixels. drawClock() undoes that.
+  drawClockCase() {
+    const ctx = this.ctx;
+    const w = 4 * (CLOCK_DIGIT_W + CLOCK_GAP) + CLOCK_COLON_W + CLOCK_GAP + CLOCK_AMPM_W + 2 * CLOCK_PAD;
+    const h = 14 + 2 * CLOCK_PAD;
+    ctx.translate(Math.round(this.canvas.width * CLOCK_SPOT.x - w * CLOCK_SCALE / 2), CLOCK_SPOT.top);
+    ctx.scale(CLOCK_SCALE, CLOCK_SCALE);
+    const x = 0;
+    const y = 0;
+
+    ctx.fillStyle = "#3a3a4a";                 // frame
+    ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+    ctx.fillStyle = "#0b0b10";                 // screen
+    ctx.fillRect(x, y, w, h);
+    return { x, y, w, h };
+  },
+
+  // FINISHED: the two dots of the colon, lit or dim.
+  drawColon(x, y, on) {
+    this.ctx.fillStyle = on ? CLOCK_ON : CLOCK_OFF;
+    this.ctx.fillRect(x, y + 3, CLOCK_COLON_W, 2);
+    this.ctx.fillRect(x, y + 9, CLOCK_COLON_W, 2);
+  },
+
+  // TODO 6: clockText()
+  // Return the time as a 5-character string, 12-hour style: "10:42" or " 9:05".
+  //   - new Date() → .getHours() is 0–23, .getMinutes() is 0–59
+  //   - 0–23 → 1–12: hours % 12, but midnight/noon give 0, which should be 12
+  //     (one trick: `x || 12` gives 12 when x is 0)
+  //   - Pad the hour to 2 with a SPACE, the minutes to 2 with a "0":
+  //     String(n).padStart(2, "0")
+  //
+  // Check yourself: 13:07 → " 1:07", 0:30 → "12:30", 22:45 → "10:45"
+  clockText() {
+    const now = new Date();
+    const hrs = String(now.getHours()%12 || 12).padStart(2," ");
+    const mn = String(now.getMinutes()).padStart(2,"0");
+    return `${hrs}:${mn}`;
+  },
+
+  // "AM" or "PM": hours 0–11 are AM, 12–23 are PM.
+  ampmText() {
+    return new Date().getHours() < 12 ? "AM" : "PM";
+  },
+
+  // Draw one tiny letter from CLOCK_LETTERS, one fillRect per lit pixel.
+  drawLetter(letter, x, y) {
+    this.ctx.fillStyle = CLOCK_ON;
+    CLOCK_LETTERS[letter].forEach((row, ry) => {
+      [...row].forEach((bit, rx) => {
+        if (bit === "1") this.ctx.fillRect(x + rx, y + ry, 1, 1);
+      });
+    });
+  },
+
+  // TODO 7: drawDigit(ch, x, y)
+  // Draw one 7-segment digit with its top-left corner at (x, y).
+  //   - Lit segments for ch: CLOCK_DIGITS[ch]. For " " that's undefined, so
+  //     fall back to "" (nothing lit).
+  //   - Loop over ALL the segments in CLOCK_SEGMENTS (Object.entries gives you
+  //     [name, rect] pairs). Lit ones use CLOCK_ON, the rest CLOCK_OFF.
+  //   - Canvas: set this.ctx.fillStyle = color, then
+  //     this.ctx.fillRect(x + rx, y + ry, rw, rh)  — rect is relative to the digit.
+  //   - Is a segment lit? The digit's string includes its letter: "abc".includes("b")
+  drawDigit(ch, x, y) {
+    const lit = CLOCK_DIGITS[ch] || "";
+    for (const [seg, [rx,ry,rw,rh]] of Object.entries(CLOCK_SEGMENTS)){
+      this.ctx.fillStyle = lit.includes(seg) ? CLOCK_ON : CLOCK_OFF;
+      this.ctx.fillRect(x+rx,y+ry,rw,rh);
+    }
+  },
+
+  // TODO 8: drawClock()
+  // Put it together:
+  //   1. const box = this.drawClockCase();
+  //   2. Start x at box.x + CLOCK_PAD, y at box.y + CLOCK_PAD.
+  //   3. Go through each character of this.clockText():
+  //        ":"  → this.drawColon(x, y, on), then move x by CLOCK_COLON_W + CLOCK_GAP
+  //        else → this.drawDigit(ch, x, y), then move x by CLOCK_DIGIT_W + CLOCK_GAP
+  //   4. Blink: the colon is `on` during even seconds (getSeconds() and %).
+  drawClock() {
+    this.ctx.save();                 // drawClockCase() moves/scales the canvas...
+    const box = this.drawClockCase();
+    let x = box.x + CLOCK_PAD;
+    const y = box.y + CLOCK_PAD;
+    const on = new Date().getSeconds() % 2 === 0;
+
+    for (const ch of this.clockText()){
+      if (ch === ":"){
+        this.drawColon(x, y, on);
+        x += CLOCK_COLON_W + CLOCK_GAP;
+      } else {
+        this.drawDigit(ch, x, y);
+        x += CLOCK_DIGIT_W + CLOCK_GAP;
+      }
+    }
+
+    // AM/PM, sitting on the digits' bottom edge (digits are 14 tall, letters 5).
+    const [first, second] = this.ampmText();
+    this.drawLetter(first, x, y + 14 - 5);
+    this.drawLetter(second, x + 4, y + 14 - 5);
+
+    this.ctx.restore();              // ...so put it back for everything else
   },
 };

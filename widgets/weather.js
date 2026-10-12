@@ -75,9 +75,11 @@ Widgets.weather = {
     const desc = describeWeatherCode(data.current.weather_code)
     const high = Math.round(data.daily.temperature_2m_max[0])
     const low = Math.round(data.daily.temperature_2m_min[0])
-    this.el.innerHTML= `<div class ="weather__temp">${temp}</div>
+    this.el.innerHTML= `<div class ="weather__city">${CONFIG.city}</div>
+                        <div class ="weather__temp">${temp}</div>
                         <div class ="weather__desc">${desc}</div>
-                        <div class ="weather__range">H ${high} · L ${low}</div>`;
+                        <div class ="weather__range">H ${high} · L ${low}</div>
+                        `;
   },
 };
 

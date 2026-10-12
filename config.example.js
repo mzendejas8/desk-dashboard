@@ -8,4 +8,5 @@ const CONFIG = {
   weatherRefreshMinutes: 15,
   focusMinutes: 25,
   breakMinutes: 5,
+  city: "Los Angeles",
 };
