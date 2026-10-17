@@ -1,0 +1,38 @@
+{
+  "frameWidth": 54,
+  "frameHeight": 65,
+  "animations": {
+    "idle": {
+      "row": 0,
+      "frames": 1
+    },
+    "walkRight": {
+      "row": 1,
+      "frames": 2
+    },
+    "walkLeft": {
+      "row": 2,
+      "frames": 2
+    },
+    "wave": {
+      "row": 3,
+      "frames": 2
+    },
+    "cheer": {
+      "row": 4,
+      "frames": 2
+    },
+    "sit": {
+      "row": 5,
+      "frames": 1
+    },
+    "drink": {
+      "row": 6,
+      "frames": 1
+    },
+    "nap": {
+      "row": 7,
+      "frames": 1
+    }
+  }
+}

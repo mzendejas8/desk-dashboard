@@ -9,20 +9,27 @@
 //
 // Digital wall clock (added 2026-10-11): TODOs 6–8, at the bottom of the file.
 //
+// More characters (added 2026-10-16): the kid and the baby, each with her own
+// state machine (KID_STATES, BABY_STATES). Everything that used to live on
+// `this` for one character now lives on an "actor" object, and the functions
+// take the actor as `a`, so the same code runs everyone:
+// this.actors = [this.me, this.kid, this.baby].
+//
 // start(), load(), resize(), tick(), draw(), drawSprite() are finished.
 // Read tick() first: it calls your functions in order, ~8 times a second.
 //
-// State lives on `this` (same idea as pomodoro):
-//   this.state  key into STATES below, e.g. "toCoffee"
-//   this.frame  which frame of the current animation is showing (0, 1, 2…)
-//   this.x      where the character is, in canvas pixels (left edge)
-//   this.wait   ticks left before a standing state moves on
+// Each actor holds its own state:
+//   a.state  key into its states table, e.g. "toCoffee"
+//   a.frame  which frame of the current animation is showing (0, 1, 2…)
+//   a.x      where the character is, in canvas pixels (left edge)
+//   a.wait   ticks left before a standing state moves on
+//   a.held   ticks the current frame has been showing (for `hold`, see KID_STATES)
 //
 // Sprite sheet: assets/me.png is a grid. Each ROW is one animation, each
 // COLUMN is one frame, every cell is the same size. assets/me.json says how
 // big a cell is and which row / how many frames each animation has:
-//   this.sheet.frameWidth, this.sheet.frameHeight
-//   this.sheet.animations.walkRight → { row: 1, frames: 8 }
+//   a.sheet.frameWidth, a.sheet.frameHeight
+//   a.sheet.animations.walkRight → { row: 1, frames: 8 }
 
 window.Widgets = window.Widgets || {};
 
@@ -35,6 +42,37 @@ const WALKER_STATES = {
   toDesk:   { anim: "drinkWalk", target: "desk", flip: true, next: "atDesk" },
   atDesk:   { anim: "drinkStand", wait: 40, next: "toCoffee" },     // sip sip
 };
+
+// The kid's loop: wander → wave → sit with a drink → cheer → nap, forever.
+// Her targets are spots in the room (KID_SPOTS). Her sheet only has 1–2
+// frames per animation, so `hold` = how many ticks each frame stays up
+// (otherwise a 2-frame wave flickers 12 times a second).
+const KID_STATES = {
+  toMiddle: { anim: "walkRight", target: "middle", hold: 2, next: "waving" },
+  waving:   { anim: "wave", wait: 24, hold: 4, next: "toPlant" },
+  toPlant:  { anim: "walkRight", target: "plant", hold: 2, next: "sitting" },
+  sitting:  { anim: "sit", wait: 24, next: "drinking" },
+  drinking: { anim: "drink", wait: 32, next: "toRug" },
+  toRug:    { anim: "walkLeft", target: "rug", hold: 2, next: "cheering" },
+  cheering: { anim: "cheer", wait: 24, hold: 4, next: "napping" },
+  napping:  { anim: "nap", wait: 60, next: "toMiddle" },                 // zzz
+};
+
+// Where her spots are: the CENTER of the spot, as a fraction of canvas width.
+const KID_SPOTS = { rug: 0.4, middle: 0.55, plant: 0.72 };
+
+// The baby's loop: toddle over → sit → bottle → cheer → toddle back → wave
+// at the window → long nap. Same idea as the kid, just slower.
+const BABY_STATES = {
+  toToys:   { anim: "walkRight", target: "toys", hold: 3, next: "playing" },
+  playing:  { anim: "sit", wait: 40, next: "bottle" },
+  bottle:   { anim: "drink", wait: 30, next: "cheering" },
+  cheering: { anim: "cheer", wait: 20, hold: 4, next: "toWindow" },
+  toWindow: { anim: "walkLeft", target: "window", hold: 3, next: "waving" },
+  waving:   { anim: "wave", wait: 24, hold: 5, next: "napping" },
+  napping:  { anim: "nap", wait: 80, next: "toToys" },                   // zzz
+};
+const BABY_SPOTS = { window: 0.28, toys: 0.46 };
 
 // Wall decorations, drawn behind everything except the wall itself.
 // x = where its CENTER goes, as a fraction of the canvas width (0 = left, 1 = right).
@@ -49,6 +87,10 @@ const WALKER_DECOR = [
 const WALKER_SCALE = 0.5; // sheet frames are ~118×183, draw them at half size
 const WALKER_SPEED = 4;   // pixels per tick while walking
 const WALKER_TICK_MS = 80;  // lower = faster (legs and steps together)
+const KID_SPEED = 2;      // little legs
+const KID_DROP = 4;       // her feet sit this much lower = closer to you, so she's drawn in front
+const BABY_SPEED = 1;     // tiny legs
+const BABY_DROP = 6;      // closest of all: in front of the kid
 
 // Digital clock: where it hangs (same units as WALKER_DECOR) and its colors.
 const CLOCK_SPOT = { x: 0.43, top: 12 };
@@ -106,10 +148,9 @@ Widgets.walker = {
         this.resize();
         window.addEventListener("resize", () => this.resize());
 
-        this.x = this.positions.desk;
-        this.state = "toCoffee";
-        this.frame = 0;
-        this.wait = 0;
+        Object.assign(this.me, { x: this.me.positions.desk, state: "toCoffee", frame: 0, wait: 0, held: 0 });
+        Object.assign(this.kid, { x: this.kid.positions.rug, state: "toMiddle", frame: 0, wait: 0, held: 0 });
+        Object.assign(this.baby, { x: this.baby.positions.window, state: "toToys", frame: 0, wait: 0, held: 0 });
 
         this.draw();
         setInterval(() => this.tick(), WALKER_TICK_MS);
@@ -130,10 +171,22 @@ Widgets.walker = {
       return img;
     };
 
-    this.sheet = await (await fetch("assets/me.json")).json();
-    this.img = await loadImage("assets/me.png");
-    this.spriteW = Math.round(this.sheet.frameWidth * WALKER_SCALE);
-    this.spriteH = Math.round(this.sheet.frameHeight * WALKER_SCALE);
+    // One actor per character: its sheet + image + how big to draw a frame.
+    // kid.png / baby.png are already shrunk by tools/slice_chibi.py, so they're drawn at 1×.
+    const loadActor = async (name, scale, extra) => {
+      const sheet = await (await fetch(`assets/${name}.json`)).json();
+      return {
+        sheet,
+        img: await loadImage(`assets/${name}.png`),
+        spriteW: Math.round(sheet.frameWidth * scale),
+        spriteH: Math.round(sheet.frameHeight * scale),
+        ...extra,
+      };
+    };
+    this.me = await loadActor("me", WALKER_SCALE, { states: WALKER_STATES, speed: WALKER_SPEED, drop: 0 });
+    this.kid = await loadActor("kid", 1, { states: KID_STATES, spots: KID_SPOTS, speed: KID_SPEED, drop: KID_DROP });
+    this.baby = await loadActor("baby", 1, { states: BABY_STATES, spots: BABY_SPOTS, speed: BABY_SPEED, drop: BABY_DROP });
+    this.actors = [this.me, this.kid, this.baby]; // drawn in this order: back to front
 
     // Background pieces. Same scale as the sprite sheet, so they get
     // WALKER_SCALE too. Each one ends up as { img, w, h } in on-screen pixels:
@@ -174,35 +227,46 @@ Widgets.walker = {
       coffeeY: this.floorY - coffee.h + PROP_DROP,
     };
     // …and where he stands next to it.
-    this.positions = {
+    this.me.positions = {
       desk: this.props.deskX + desk.w + 4,
-      coffee: this.props.coffeeX - this.spriteW - 6,
+      coffee: this.props.coffeeX - this.me.spriteW - 6,
     };
+    // The girls' spots: fraction of the width → left edge (spots are centers).
+    for (const a of [this.kid, this.baby]) {
+      a.positions = {};
+      for (const [spot, frac] of Object.entries(a.spots)) {
+        a.positions[spot] = Math.round(this.canvas.width * frac - a.spriteW / 2);
+      }
+    }
   },
 
-  // FINISHED: one step of the game loop.
+  // FINISHED: one step of the game loop, for every actor.
   tick() {
-    this.advanceFrame();
+    for (const a of this.actors) {
+      this.advanceFrame(a);
 
-    const state = WALKER_STATES[this.state];
-    if (state.target) {
-      this.move();
-    } else {
-      this.wait -= 1;
-      if (this.wait <= 0) this.switchState();
+      const state = a.states[a.state];
+      if (state.target) {
+        this.move(a);
+      } else {
+        a.wait -= 1;
+        if (a.wait <= 0) this.switchState(a);
+      }
     }
 
     this.draw();
   },
 
-  // FINISHED: clear, draw the room, draw the character.
+  // FINISHED: clear, draw the room, draw the characters.
   draw() {
-    const state = WALKER_STATES[this.state];
-    const { sx, sy } = this.frameSource(state.anim, this.frame);
-
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawScene();
-    this.drawSprite(sx, sy, this.x, state.flip);
+
+    for (const a of this.actors) {
+      const state = a.states[a.state];
+      const { sx, sy } = this.frameSource(a, state.anim, a.frame);
+      this.drawSprite(a, sx, sy, a.x, state.flip);
+    }
   },
 
   // TODO 5: drawScene()
@@ -241,20 +305,20 @@ Widgets.walker = {
 
   // FINISHED: copy one cell of the sheet onto the canvas at x.
   // flip = draw it mirrored (so a right-facing animation walks left).
-  drawSprite(sx, sy, x, flip) {
+  drawSprite(a, sx, sy, x, flip) {
     const ctx = this.ctx;
-    const { frameWidth: fw, frameHeight: fh } = this.sheet;
-    const y = this.floorY - this.spriteH;
+    const { frameWidth: fw, frameHeight: fh } = a.sheet;
+    const y = this.floorY + a.drop - a.spriteH;
 
     ctx.save();
     if (flip) {
       // Mirror around the sprite's own center instead of the canvas edge.
-      ctx.translate(x + this.spriteW, 0);
+      ctx.translate(x + a.spriteW, 0);
       ctx.scale(-1, 1);
       x = 0;
     }
     // drawImage(image, sourceX, sourceY, sourceW, sourceH, destX, destY, destW, destH)
-    ctx.drawImage(this.img, sx, sy, fw, fh, x, y, this.spriteW, this.spriteH);
+    ctx.drawImage(a.img, sx, sy, fw, fh, x, y, a.spriteW, a.spriteH);
     ctx.restore();
   },
 
@@ -268,9 +332,9 @@ Widgets.walker = {
   //   frameSource("idle", 0)      → { sx: 0,   sy: 0 }
   //   frameSource("walkRight", 2) → { sx: 236, sy: 183 }
   //   frameSource("drinkWalk", 1) → { sx: 118, sy: 732 }
-  frameSource(animName, frame) {
-    const {row} = this.sheet.animations[animName];
-    return { sx: frame * this.sheet.frameWidth, sy: row * this.sheet.frameHeight };
+  frameSource(a, animName, frame) {
+    const {row} = a.sheet.animations[animName];
+    return { sx: frame * a.sheet.frameWidth, sy: row * a.sheet.frameHeight };
   },
 
   // TODO 2: advanceFrame()
@@ -279,9 +343,16 @@ Widgets.walker = {
   //   - Current animation name: WALKER_STATES[this.state].anim
   //   - How many frames it has: this.sheet.animations[name].frames
   // You used the operator for this in formatTime().
-  advanceFrame() {
-    const { frames } = this.sheet.animations[WALKER_STATES[this.state].anim];
-    this.frame = (this.frame + 1) % frames;
+  // Added for the kid: a state's `hold` keeps each frame up that many ticks
+  // (no `hold` = 1 = a new frame every tick, like before).
+  advanceFrame(a) {
+    const state = a.states[a.state];
+    a.held += 1;
+    if (a.held < (state.hold || 1)) return;
+    a.held = 0;
+
+    const { frames } = a.sheet.animations[state.anim];
+    a.frame = (a.frame + 1) % frames;
   },
 
   // TODO 3: move()
@@ -294,14 +365,14 @@ Widgets.walker = {
   // Gotcha: WALKER_SPEED is 4, so this.x may jump right past the target and
   // never land exactly on it. Check "close enough" (Math.abs is your friend),
   // then snap this.x onto the target so he doesn't drift.
-  move() {
-    const target = this.positions[WALKER_STATES[this.state].target];
-    if (Math.abs(target - this.x) <= WALKER_SPEED) {
-      this.x = target;
-      this.switchState();
+  move(a) {
+    const target = a.positions[a.states[a.state].target];
+    if (Math.abs(target - a.x) <= a.speed) {
+      a.x = target;
+      this.switchState(a);
       return;
     }
-    this.x += target > this.x ? WALKER_SPEED : -WALKER_SPEED;
+    a.x += target > a.x ? a.speed : -a.speed;
   },
 
   // TODO 4: switchState()
@@ -313,11 +384,12 @@ Widgets.walker = {
   // That's the whole state machine: the table at the top does the thinking.
   // Try it: add a new state (e.g. stand at the desk with "idle" before the
   // sip) by only editing WALKER_STATES.
-  switchState() {
-    this.state = WALKER_STATES[this.state].next;
-    this.frame = 0;
-    const next = WALKER_STATES[this.state];
-    if (next.wait) this.wait = next.wait;
+  switchState(a) {
+    a.state = a.states[a.state].next;
+    a.frame = 0;
+    a.held = 0;
+    const next = a.states[a.state];
+    if (next.wait) a.wait = next.wait;
   },
 
   // ---- Digital wall clock -------------------------------------------------
