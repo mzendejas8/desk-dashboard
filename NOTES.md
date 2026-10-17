@@ -1,48 +1,36 @@
-# Desk Dashboard — Notes
+# Desk Dashboard: Notes
 
-Started 2026-10-06. Fun/simple public GitHub project, one widget per session.
+A small side project (October 2026) for practicing plain JavaScript, one
+widget at a time. It's wrapped up; these are the notes I kept.
 
-## Ground rules
-- Skeleton method: finished structure + one finished example (clock), concept
-  functions left as TODOs with spec comments. ~1 new concept per TODO.
-- `config.js` is gitignored (has real location). Commit `config.example.js` only.
-- No secrets in the frontend, ever. Spotify/Calendar need tokens → those widgets
-  will need a tiny backend (Flask) when we get there. That's the next new concept.
+## What each widget taught me
 
-- No homelab widgets — decided 2026-10-06, keep it out of this project.
+- **Pomodoro**: `setInterval`/`clearInterval`, keeping state on an object,
+  rendering from state, why `setInterval(this.tick)` loses `this`.
+- **Weather**: `fetch` + `async`/`await`, `URLSearchParams`, `fetch` not
+  throwing on a 404/500 (check `response.ok`), lookup tables with a `??`
+  fallback.
+- **Coffee walker**: `<canvas>` and `drawImage`, sprite sheet math, a game
+  loop, and a state machine kept as data (`WALKER_STATES`). Adding the kid and
+  the baby meant turning one character into "actor" objects that the same
+  functions run on.
+- **Wall clock**: drawing 7-segment digits from a lookup table, `padStart`,
+  12-hour time with `% 12 || 12`, `ctx.save()`/`translate`/`scale`/`restore`.
+- **Tasks**: building a list with `createElement`, click handlers that change
+  state and re-render.
 
-## Roadmap (updated 2026-10-12)
-**v1.0 — finish line**
-1. Pomodoro (TODOs 1–5 in `widgets/pomodoro.js`) ✅ done 2026-10-07
-2. ~~Notes widget~~ skipped 2026-10-12, moved to v1.1+
-3. Weather (TODOs 1–4 in `widgets/weather.js`) ✅ done 2026-10-08
-   - [x] Show the city name on the card (`city` in config.js) ✅ 2026-10-12
-4. Coffee walker (added 2026-10-10). 8-bit you walks desk →
-   coffee machine → back, on a `<canvas>`. New concepts: sprite sheets,
-   `drawImage` slices, game loop, state machine.
-   - [x] Sprite sheet: generated art → `tools/slice_sprites.py` → `assets/me.png`
-         + `assets/me.json` (118×183 cells, one animation per row)
-   - [x] Widget skeleton (`widgets/walker.js`), hooked into index.html + style.css
-   - [x] TODOs 1–4 in `widgets/walker.js` ✅ 2026-10-10 (3 + 4 via reference,
-         walked through line by line). Working copy: `walker.reference.js` (gitignored)
-   - [x] Background art: Gemini image on magenta → `tools/slice_background.py`
-         → `assets/bg-tile.png`, `desk.png`, `coffee.png`, `bg.json`
-   - [x] TODO 5 `drawScene()` ✅ (filled in for you)
-   - [x] Office look: Gemini wall + decor → `tools/slice_office.py` → bg-tile,
-         window, whiteboard, plant, clock, poster. Layout = `WALKER_DECOR` in walker.js
-   - [x] TODOs 6–8: pixel wall clock (7-segment digits, blinking colon) ✅ 2026-10-12
-         (TODO 8 + AM/PM + 2× scale filled in for you)
-   - Later: trigger the coffee run when pomodoro hits a break
-5. ← **you are here** Push to GitHub + live demo (GitHub Pages) + screenshot in README → tag v1.0
+## Decisions
 
-**v1.1+ — don't touch until v1.0 is tagged**
-- Weather: set city name in config, look up coordinates via Open-Meteo geocoding API (chains two API calls)
-- Notes widget (spec from v1.0, skipped 2026-10-12): text box + Add, list, ✕ deletes, localStorage
-- Walker: weather in the window (rain/sun/clouds from Open-Meteo code) + pixel wall calendar for the date → then retire the weather card
-- Calendar widget: read-only today's events/meetings, in the weather card's old spot. Decide first: Google (OAuth in browser) or work Outlook (Microsoft Graph → via the Flask backend with Asana/Spotify). Start with fake meetings like Tasks
-- Note → calendar event button
-- Notes v2: click to edit, Enter to add, colors, pin
-- Pomodoro stretch: long break every 4th, chime, browser notification
-- Spotify now playing (needs backend)
-- Tasks widget (right of weather/pomodoro): placeholder card + TODOs 1–2 in `widgets/tasks.js` added 2026-10-12. Real tasks from Asana later (needs backend)
-- Keyboard shortcuts, themes, kiosk mode on a monitor
+- `config.js` is gitignored (real location); `config.example.js` is the
+  public fallback, so the GitHub Pages demo works without it.
+- No secrets in the frontend. Anything that needs a token (Spotify, Asana,
+  calendar) would need a small backend, so those stayed out of scope.
+- The art is AI-generated, then cleaned up with the Python scripts in `tools/`.
+
+## Ideas, if I ever come back to it
+
+- Start the coffee run when the pomodoro hits a break
+- Weather in the walker's window (rain/sun/clouds) instead of a weather card
+- Notes widget with `localStorage`
+- Pomodoro: long break every 4th session, a chime
+- Real tasks from Asana via a Flask endpoint, falling back to the samples

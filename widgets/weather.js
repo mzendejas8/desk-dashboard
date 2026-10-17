@@ -1,13 +1,4 @@
-// Weather widget — uses Open-Meteo (free, no API key): https://open-meteo.com/en/docs
-//
-// Your TODOs, easiest → hardest. Do them in order; each one is one new idea.
-//   1. describeWeatherCode()  — object lookup with a fallback
-//   2. buildWeatherUrl()      — building a URL with query params
-//   3. fetchWeather()         — async/await + fetch + error handling
-//   4. render()               — putting data into the DOM
-//
-// start() and refresh() are finished — they call your functions.
-// Tip: open DevTools (F12) → Console to see errors and console.log output.
+// Weather widget: Open-Meteo (free, no API key), https://open-meteo.com/en/docs
 
 window.Widgets = window.Widgets || {};
 
@@ -55,81 +46,41 @@ Widgets.weather = {
     }
   },
 
-  // TODO 4: render(data)
-  // `data` is the parsed JSON from Open-Meteo. The parts you need:
-  //   data.current.temperature_2m        → e.g. 72.4
-  //   data.current.weather_code          → e.g. 2
-  //   data.daily.temperature_2m_max[0]   → today's high
-  //   data.daily.temperature_2m_min[0]   → today's low
-  //
-  // Set this.el.innerHTML to something like:
-  //   <div class="weather__temp">72°</div>
-  //   <div class="weather__desc">Partly cloudy</div>
-  //   <div class="weather__range">H 78° · L 61°</div>
-  // (Those class names are already styled in style.css.)
-  //
-  // Round the temps — Math.round(). Use describeWeatherCode() for the text.
-  // Stuck on the shape of `data`? console.log(data) and look in DevTools.
   render(data) {
-    const temp = Math.round(data.current.temperature_2m)
-    const desc = describeWeatherCode(data.current.weather_code)
-    const high = Math.round(data.daily.temperature_2m_max[0])
-    const low = Math.round(data.daily.temperature_2m_min[0])
-    this.el.innerHTML= `<div class ="weather__city">${CONFIG.city}</div>
-                        <div class ="weather__temp">${temp}</div>
-                        <div class ="weather__desc">${desc}</div>
-                        <div class ="weather__range">H ${high} · L ${low}</div>
-                        `;
+    const temp = Math.round(data.current.temperature_2m);
+    const desc = describeWeatherCode(data.current.weather_code);
+    const high = Math.round(data.daily.temperature_2m_max[0]);
+    const low = Math.round(data.daily.temperature_2m_min[0]);
+    this.el.innerHTML = `
+      <div class="weather__city">${CONFIG.city}</div>
+      <div class="weather__temp">${temp}°</div>
+      <div class="weather__desc">${desc}</div>
+      <div class="weather__range">H ${high}° · L ${low}°</div>
+    `;
   },
 };
 
-// TODO 1: describeWeatherCode(code)
-// Return the matching text from WEATHER_CODES.
-// If the code isn't in the table, return "Unknown" instead of undefined.
-//   describeWeatherCode(3)   → "Overcast"
-//   describeWeatherCode(999) → "Unknown"
 function describeWeatherCode(code) {
-
- return WEATHER_CODES[code] ?? "Unknown";
+  return WEATHER_CODES[code] ?? "Unknown";
 }
 
-// TODO 2: buildWeatherUrl(config)
-// Return a URL string for: https://api.open-meteo.com/v1/forecast
-// with these query params:
-//   latitude          → config.latitude
-//   longitude         → config.longitude
-//   current           → "temperature_2m,weather_code"
-//   daily             → "temperature_2m_max,temperature_2m_min"
-//   temperature_unit  → config.units
-//   timezone          → "auto"
-//   forecast_days     → 1
-//
-// You *could* glue strings together, but look up `URLSearchParams` — it
-// handles the ?, &, and encoding for you.
-// Check yourself: paste the URL it returns into your browser. You should see JSON.
 function buildWeatherUrl(config) {
-  const baseurl = "https://api.open-meteo.com/v1/forecast";
-  const params ={latitude: config.latitude,
-                  longitude: config.longitude,
-                  current:"temperature_2m,weather_code",
-                  daily: "temperature_2m_max,temperature_2m_min",
-                  temperature_unit: config.units,
-                  timezone: "auto",
-                  forecast_days : 1
-  };
-  const query = new URLSearchParams(params);
-  return `${baseurl}?${query}`;
+  const params = new URLSearchParams({
+    latitude: config.latitude,
+    longitude: config.longitude,
+    current: "temperature_2m,weather_code",
+    daily: "temperature_2m_max,temperature_2m_min",
+    temperature_unit: config.units,
+    timezone: "auto",
+    forecast_days: 1,
+  });
+  return `https://api.open-meteo.com/v1/forecast?${params}`;
 }
 
-// TODO 3: async fetchWeather(url)
-// Fetch the URL, and return the parsed JSON.
-// One catch: fetch() does NOT throw on a 404/500 — it only throws if the
-// network is down. Check `response.ok`, and if it's false, throw an Error
-// yourself (include response.status in the message). refresh() catches it
-// and shows "Weather unavailable".
+// fetch() only throws when the network is down, so a 404/500 has to be
+// turned into an error by hand. refresh() catches it.
 async function fetchWeather(url) {
- const response = await fetch(url);
- if(!response.ok){throw new Error(`Weather request failed: ${response.status}`)} 
-  const data = await response.json();
-  return data;
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Weather request failed: ${response.status}`);
+  return response.json();
 }

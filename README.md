@@ -1,7 +1,9 @@
 # Desk Dashboard
 
-An always-on dashboard for a spare monitor: clock, weather, pomodoro timer, an
-8-bit coffee walker, and (soon) what's playing and today's calendar. Plain HTML/CSS/JS, no build step.
+An always-on dashboard for a spare monitor: an 8-bit office with a wall clock,
+weather, a pomodoro timer, and a task list. Plain HTML/CSS/JS, no build step.
+
+Live demo: https://mzendejas8.github.io/desk-dashboard/
 
 ## Run it
 
@@ -24,12 +26,10 @@ Adding a widget = one new file in `widgets/`, one `<script>` tag, one card.
 
 | Widget | Status | Data source |
 | --- | --- | --- |
-| Clock | ✅ | Browser |
+| Coffee walker | ✅ | Sprite sheets + pixel-art office (with a 7-segment wall clock) on a `<canvas>` |
 | Weather | ✅ | [Open-Meteo](https://open-meteo.com/) (no key) |
 | Pomodoro | ✅ | Browser |
-| Coffee walker | ✅ | Sprite sheet + pixel-art office on a `<canvas>` |
-| Now playing | Planned | Spotify |
-| Calendar | Planned | Google Calendar |
+| Tasks | ✅ | Sample tasks, click to check off |
 
 ## Art pipeline
 
@@ -38,5 +38,7 @@ The walker's art is generated, then cleaned up by the scripts in `tools/`
 
 - `slice_sprites.py` turns a loose character sheet into the `assets/me.png`
   grid + `me.json`.
+- `slice_chibi.py` keys out the dark background on the kid and baby sheets
+  and writes `assets/kid.*` and `assets/baby.*`.
 - `slice_background.py` cuts the desk and coffee station off a magenta background.
 - `slice_office.py` cuts the wall tile and decorations, and writes `bg.json`.

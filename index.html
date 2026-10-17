@@ -9,27 +9,18 @@
 <body>
   <main class="grid">
     <!-- Each card has a data-widget name. app.js finds it and starts the matching widget. -->
-    <!-- Hidden for now (the walker has its own wall clock):
-    <section class="card card--clock" data-widget="clock"></section>
-    -->
     <section class="card card--walker" data-widget="walker"></section>
     <section class="card card--weather" data-widget="weather">
       <p class="muted">Loading weather…</p>
     </section>
     <section class="card card--pomodoro" data-widget="pomodoro"></section>
     <section class="card card--tasks" data-widget="tasks"></section>
-
-    <!-- Future widgets — uncomment as you build them:
-    <section class="card" data-widget="nowPlaying"></section>
-    <section class="card" data-widget="calendar"></section>
-    -->
   </main>
 
   <!-- Order matters: config first, then widgets (they register themselves), then app.js starts them. -->
   <script src="config.js"></script>
   <!-- config.js is gitignored, so the public site (GitHub Pages) doesn't have it: use the example values there. -->
   <script>if (typeof CONFIG === "undefined") document.write('<script src="config.example.js"><\/script>');</script>
-  <script src="widgets/clock.js"></script>
   <script src="widgets/weather.js"></script>
   <script src="widgets/pomodoro.js"></script>
   <script src="widgets/walker.js"></script>

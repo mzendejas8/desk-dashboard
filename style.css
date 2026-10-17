@@ -33,12 +33,7 @@ body {
 .muted { color: var(--muted); }
 .error { color: #f38ba8; }
 
-/* Clock */
-.card--clock { grid-column: 1 / -1; text-align: center; }
-.clock__time { font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 700; line-height: 1; }
-.clock__date { font-size: 1.5rem; color: var(--muted); margin-top: 8px; }
-
-/* Weather — class names for you to use in Widgets.weather.render() */
+/* Weather */
 .card--weather { grid-column: 1; }
 .weather__city { color: var(--muted); }
 .weather__temp { font-size: 4rem; font-weight: 700; }
@@ -66,4 +61,5 @@ body {
 .card--tasks { grid-column: 2 / -1; grid-row: 2 / span 2; }
 .tasks__title { font-size: 1.4rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; }
 .tasks__list { list-style: none; padding: 0; display: grid; gap: 8px; font-size: 1.2rem; }
+.tasks__list li { cursor: pointer; }
 .tasks__item--done { color: var(--muted); text-decoration: line-through; }

@@ -1,4 +1,4 @@
-// Widgets register themselves here: Widgets.clock = { start(el) { ... } }
+// Widgets register themselves here: Widgets.weather = { start(el) { ... } }
 // Defined with `var` so each widget file can add to it before app.js runs.
 var Widgets = window.Widgets || {};
 

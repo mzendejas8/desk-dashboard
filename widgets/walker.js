@@ -1,41 +1,27 @@
-// Coffee walker — 8-bit you walks desk → coffee machine → back, forever.
+// Coffee walker: a pixel-art office on a <canvas>. I walk desk → coffee
+// machine → back, while the kid and the baby run their own loops.
 //
-// Built in 5 steps (TODOs 1–5, all done), easiest → hardest:
-//   1. frameSource()  — sprite sheet math: which slice of me.png to draw
-//   2. advanceFrame() — step to the next frame, loop back to 0 at the end
-//   3. move()         — walk toward the target, switch state on arrival
-//   4. switchState()  — the state machine: go to the next state in STATES
-//   5. drawScene()    — the background: tile the wall, place the desk + coffee
-//
-// Digital wall clock (added 2026-10-11): TODOs 6–8, at the bottom of the file.
-//
-// More characters (added 2026-10-16): the kid and the baby, each with her own
-// state machine (KID_STATES, BABY_STATES). Everything that used to live on
-// `this` for one character now lives on an "actor" object, and the functions
-// take the actor as `a`, so the same code runs everyone:
-// this.actors = [this.me, this.kid, this.baby].
-//
-// start(), load(), resize(), tick(), draw(), drawSprite() are finished.
-// Read tick() first: it calls your functions in order, ~8 times a second.
-//
-// Each actor holds its own state:
+// Each character is an "actor" object with its own sprite sheet, state table
+// and position. The functions below take the actor as `a`, so the same code
+// runs everyone: this.actors = [this.me, this.kid, this.baby].
 //   a.state  key into its states table, e.g. "toCoffee"
 //   a.frame  which frame of the current animation is showing (0, 1, 2…)
 //   a.x      where the character is, in canvas pixels (left edge)
 //   a.wait   ticks left before a standing state moves on
-//   a.held   ticks the current frame has been showing (for `hold`, see KID_STATES)
+//   a.held   ticks the current frame has been showing (see `hold` below)
 //
-// Sprite sheet: assets/me.png is a grid. Each ROW is one animation, each
-// COLUMN is one frame, every cell is the same size. assets/me.json says how
-// big a cell is and which row / how many frames each animation has:
-//   a.sheet.frameWidth, a.sheet.frameHeight
+// Sprite sheets (assets/<name>.png) are grids: each ROW is one animation,
+// each COLUMN one frame, every cell the same size. assets/<name>.json has the
+// cell size and each animation's row + frame count:
 //   a.sheet.animations.walkRight → { row: 1, frames: 8 }
 
 window.Widgets = window.Widgets || {};
 
-// The state machine as data. Each state says which animation to play and
-// which state comes next. Walking states have a `target` ("coffee" or "desk");
-// standing states have `wait` (how many ticks to stand there).
+// The state machines as data. Each state says which animation to play and
+// which state comes next. Walking states have a `target` (a key into the
+// actor's positions); standing states have `wait` (ticks to stand there).
+// `hold` = ticks each frame stays up (default 1); the girls' sheets only have
+// 1–2 frames per animation, so without it a wave flickers 12 times a second.
 const WALKER_STATES = {
   toCoffee: { anim: "walkRight", target: "coffee", next: "atCoffee" },
   atCoffee: { anim: "idle", wait: 16, next: "toDesk" },             // pouring…
@@ -43,10 +29,7 @@ const WALKER_STATES = {
   atDesk:   { anim: "drinkStand", wait: 40, next: "toCoffee" },     // sip sip
 };
 
-// The kid's loop: wander → wave → sit with a drink → cheer → nap, forever.
-// Her targets are spots in the room (KID_SPOTS). Her sheet only has 1–2
-// frames per animation, so `hold` = how many ticks each frame stays up
-// (otherwise a 2-frame wave flickers 12 times a second).
+// The kid: wander → wave → sit with a drink → cheer → nap.
 const KID_STATES = {
   toMiddle: { anim: "walkRight", target: "middle", hold: 2, next: "waving" },
   waving:   { anim: "wave", wait: 24, hold: 4, next: "toPlant" },
@@ -58,11 +41,11 @@ const KID_STATES = {
   napping:  { anim: "nap", wait: 60, next: "toMiddle" },                 // zzz
 };
 
-// Where her spots are: the CENTER of the spot, as a fraction of canvas width.
+// The girls' spots: the CENTER of each spot, as a fraction of canvas width.
 const KID_SPOTS = { rug: 0.4, middle: 0.55, plant: 0.72 };
 
-// The baby's loop: toddle over → sit → bottle → cheer → toddle back → wave
-// at the window → long nap. Same idea as the kid, just slower.
+// The baby: toddle over → sit → bottle → cheer → toddle back → wave at the
+// window → long nap.
 const BABY_STATES = {
   toToys:   { anim: "walkRight", target: "toys", hold: 3, next: "playing" },
   playing:  { anim: "sit", wait: 40, next: "bottle" },
@@ -161,7 +144,7 @@ Widgets.walker = {
       });
   },
 
-  // FINISHED: fetch the frame info and the images. All of it has to arrive
+  // Fetch the frame info and the images. All of it has to arrive
   // before anything can be drawn, so start() waits on this.
   async load() {
     const loadImage = async (src) => {
@@ -193,7 +176,7 @@ Widgets.walker = {
     //   this.bg.tile    the wall + floor strip (repeat it across)
     //   this.bg.desk    desk, monitor, chair
     //   this.bg.coffee  counter + coffee machine
-    //   this.bg.window, .whiteboard, .plant, .clock, .poster  (see WALKER_DECOR)
+    //   this.bg.window, .whiteboard, .plant, .poster  (see WALKER_DECOR)
     const bgInfo = await (await fetch("assets/bg.json")).json();
     this.feetY = bgInfo.tile.feetY;
     this.bg = {};
@@ -207,7 +190,7 @@ Widgets.walker = {
     }
   },
 
-  // FINISHED: match the canvas to the card's width, recompute where things go.
+  // Match the canvas to the card's width, recompute where things go.
   resize() {
     const { tile, desk, coffee } = this.bg;
     this.canvas.width = this.canvas.clientWidth;
@@ -240,7 +223,7 @@ Widgets.walker = {
     }
   },
 
-  // FINISHED: one step of the game loop, for every actor.
+  // One step of the game loop, for every actor.
   tick() {
     for (const a of this.actors) {
       this.advanceFrame(a);
@@ -257,7 +240,7 @@ Widgets.walker = {
     this.draw();
   },
 
-  // FINISHED: clear, draw the room, draw the characters.
+  // Clear, draw the room, draw the characters.
   draw() {
     this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
     this.drawScene();
@@ -269,22 +252,8 @@ Widgets.walker = {
     }
   },
 
-  // TODO 5: drawScene()
-  // Draw the background, back to front. Whatever you draw LAST ends up in
-  // front, so order matters: wall first, then furniture. (draw() calls this
-  // before drawSprite(), which is why you end up in front of everything.)
-  //
-  // Each piece is this.bg.<name> = { img, w, h }. The pieces aren't sprite
-  // sheets, so use the short 5-argument drawImage, no source rectangle:
-  //   ctx.drawImage(img, x, y, w, h)   // draw the whole image at (x, y), w×h
-  //
-  //   1. Wall: one tile is only this.bg.tile.w wide. Repeat it across the
-  //      whole canvas: start at x = 0, draw, move x over by one tile width,
-  //      keep going while x < this.canvas.width. (y is 0: top of the canvas.)
-  //   2. Desk: at (this.props.deskX, this.props.deskY), size desk.w × desk.h.
-  //   3. Coffee: same idea, at (this.props.coffeeX, this.props.coffeeY).
-  //
-  // Tip: const { tile, desk, coffee } = this.bg;  saves a lot of typing.
+  // The room, back to front: wall tiles, decorations, furniture, clock.
+  // draw() calls this before the sprites, so the characters end up in front.
   drawScene() {
     const ctx = this.ctx;
     const { tile, desk, coffee } = this.bg;
@@ -303,7 +272,7 @@ Widgets.walker = {
     this.drawClock();
   },
 
-  // FINISHED: copy one cell of the sheet onto the canvas at x.
+  // Copy one cell of the sheet onto the canvas at x.
   // flip = draw it mirrored (so a right-facing animation walks left).
   drawSprite(a, sx, sy, x, flip) {
     const ctx = this.ctx;
@@ -322,29 +291,14 @@ Widgets.walker = {
     ctx.restore();
   },
 
-  // TODO 1: frameSource(animName, frame)
-  // Return { sx, sy }: the top-left pixel of that frame's cell in me.png.
-  //   - Look up the animation: this.sheet.animations[animName] → { row, frames }
-  //   - Columns go across (x), rows go down (y). Each cell is
-  //     this.sheet.frameWidth wide and this.sheet.frameHeight tall.
-  //
-  // Check yourself (cells are 118×183):
-  //   frameSource("idle", 0)      → { sx: 0,   sy: 0 }
-  //   frameSource("walkRight", 2) → { sx: 236, sy: 183 }
-  //   frameSource("drinkWalk", 1) → { sx: 118, sy: 732 }
+  // Top-left pixel { sx, sy } of an animation frame's cell in the sheet.
   frameSource(a, animName, frame) {
-    const {row} = a.sheet.animations[animName];
+    const { row } = a.sheet.animations[animName];
     return { sx: frame * a.sheet.frameWidth, sy: row * a.sheet.frameHeight };
   },
 
-  // TODO 2: advanceFrame()
-  // Add 1 to this.frame. When it goes past the last frame of the current
-  // animation, wrap back to 0.
-  //   - Current animation name: WALKER_STATES[this.state].anim
-  //   - How many frames it has: this.sheet.animations[name].frames
-  // You used the operator for this in formatTime().
-  // Added for the kid: a state's `hold` keeps each frame up that many ticks
-  // (no `hold` = 1 = a new frame every tick, like before).
+  // Next frame of the current animation (wrapping to 0), once the current
+  // frame has been up for the state's `hold` ticks.
   advanceFrame(a) {
     const state = a.states[a.state];
     a.held += 1;
@@ -355,16 +309,8 @@ Widgets.walker = {
     a.frame = (a.frame + 1) % frames;
   },
 
-  // TODO 3: move()
-  // Walk one step toward the target, and switch state when you get there.
-  //   - Target x: this.positions[WALKER_STATES[this.state].target]
-  //   - If the target is to the right, add WALKER_SPEED to this.x;
-  //     if it's to the left, subtract it.
-  //   - Arrived? Call this.switchState().
-  //
-  // Gotcha: WALKER_SPEED is 4, so this.x may jump right past the target and
-  // never land exactly on it. Check "close enough" (Math.abs is your friend),
-  // then snap this.x onto the target so he doesn't drift.
+  // One step toward the target. Speed can overshoot it, so "close enough"
+  // snaps onto the target and moves on to the next state.
   move(a) {
     const target = a.positions[a.states[a.state].target];
     if (Math.abs(target - a.x) <= a.speed) {
@@ -375,15 +321,7 @@ Widgets.walker = {
     a.x += target > a.x ? a.speed : -a.speed;
   },
 
-  // TODO 4: switchState()
-  // Go to the next state:
-  //   - this.state becomes WALKER_STATES[this.state].next
-  //   - Restart the animation: this.frame = 0
-  //   - If the NEW state has a `wait`, copy it into this.wait
-  //
-  // That's the whole state machine: the table at the top does the thinking.
-  // Try it: add a new state (e.g. stand at the desk with "idle" before the
-  // sip) by only editing WALKER_STATES.
+  // Go to the next state and restart its animation (and its wait, if any).
   switchState(a) {
     a.state = a.states[a.state].next;
     a.frame = 0;
@@ -395,7 +333,7 @@ Widgets.walker = {
   // ---- Digital wall clock -------------------------------------------------
   // drawScene() calls drawClock() every tick, so it's always current.
 
-  // FINISHED: draw the clock's case and return its box { x, y, w, h }.
+  // Draw the clock's case and return its box { x, y, w, h }.
   // The case is sized to fit 4 digits + a colon + AM/PM.
   // It also moves and scales the canvas so (0, 0) is the case's corner and
   // every clock pixel is CLOCK_SCALE screen pixels. drawClock() undoes that.
@@ -415,26 +353,18 @@ Widgets.walker = {
     return { x, y, w, h };
   },
 
-  // FINISHED: the two dots of the colon, lit or dim.
+  // The two dots of the colon, lit or dim.
   drawColon(x, y, on) {
     this.ctx.fillStyle = on ? CLOCK_ON : CLOCK_OFF;
     this.ctx.fillRect(x, y + 3, CLOCK_COLON_W, 2);
     this.ctx.fillRect(x, y + 9, CLOCK_COLON_W, 2);
   },
 
-  // TODO 6: clockText()
-  // Return the time as a 5-character string, 12-hour style: "10:42" or " 9:05".
-  //   - new Date() → .getHours() is 0–23, .getMinutes() is 0–59
-  //   - 0–23 → 1–12: hours % 12, but midnight/noon give 0, which should be 12
-  //     (one trick: `x || 12` gives 12 when x is 0)
-  //   - Pad the hour to 2 with a SPACE, the minutes to 2 with a "0":
-  //     String(n).padStart(2, "0")
-  //
-  // Check yourself: 13:07 → " 1:07", 0:30 → "12:30", 22:45 → "10:45"
+  // The time as 5 characters, 12-hour style: "10:42" or " 9:05".
   clockText() {
     const now = new Date();
-    const hrs = String(now.getHours()%12 || 12).padStart(2," ");
-    const mn = String(now.getMinutes()).padStart(2,"0");
+    const hrs = String(now.getHours() % 12 || 12).padStart(2, " ");
+    const mn = String(now.getMinutes()).padStart(2, "0");
     return `${hrs}:${mn}`;
   },
 
@@ -453,31 +383,17 @@ Widgets.walker = {
     });
   },
 
-  // TODO 7: drawDigit(ch, x, y)
-  // Draw one 7-segment digit with its top-left corner at (x, y).
-  //   - Lit segments for ch: CLOCK_DIGITS[ch]. For " " that's undefined, so
-  //     fall back to "" (nothing lit).
-  //   - Loop over ALL the segments in CLOCK_SEGMENTS (Object.entries gives you
-  //     [name, rect] pairs). Lit ones use CLOCK_ON, the rest CLOCK_OFF.
-  //   - Canvas: set this.ctx.fillStyle = color, then
-  //     this.ctx.fillRect(x + rx, y + ry, rw, rh)  — rect is relative to the digit.
-  //   - Is a segment lit? The digit's string includes its letter: "abc".includes("b")
+  // One 7-segment digit with its top-left corner at (x, y). A space lights
+  // nothing, but the unlit segments still show faintly.
   drawDigit(ch, x, y) {
     const lit = CLOCK_DIGITS[ch] || "";
-    for (const [seg, [rx,ry,rw,rh]] of Object.entries(CLOCK_SEGMENTS)){
+    for (const [seg, [rx, ry, rw, rh]] of Object.entries(CLOCK_SEGMENTS)) {
       this.ctx.fillStyle = lit.includes(seg) ? CLOCK_ON : CLOCK_OFF;
-      this.ctx.fillRect(x+rx,y+ry,rw,rh);
+      this.ctx.fillRect(x + rx, y + ry, rw, rh);
     }
   },
 
-  // TODO 8: drawClock()
-  // Put it together:
-  //   1. const box = this.drawClockCase();
-  //   2. Start x at box.x + CLOCK_PAD, y at box.y + CLOCK_PAD.
-  //   3. Go through each character of this.clockText():
-  //        ":"  → this.drawColon(x, y, on), then move x by CLOCK_COLON_W + CLOCK_GAP
-  //        else → this.drawDigit(ch, x, y), then move x by CLOCK_DIGIT_W + CLOCK_GAP
-  //   4. Blink: the colon is `on` during even seconds (getSeconds() and %).
+  // Case, digits, blinking colon (on during even seconds), AM/PM.
   drawClock() {
     this.ctx.save();                 // drawClockCase() moves/scales the canvas...
     const box = this.drawClockCase();
@@ -485,8 +401,8 @@ Widgets.walker = {
     const y = box.y + CLOCK_PAD;
     const on = new Date().getSeconds() % 2 === 0;
 
-    for (const ch of this.clockText()){
-      if (ch === ":"){
+    for (const ch of this.clockText()) {
+      if (ch === ":") {
         this.drawColon(x, y, on);
         x += CLOCK_COLON_W + CLOCK_GAP;
       } else {
