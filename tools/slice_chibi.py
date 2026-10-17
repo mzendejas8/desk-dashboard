@@ -29,9 +29,8 @@ ANIMATIONS = {
     "cheer": [(2, 0), (2, 1)],
     "sit": [(2, 2)],
     "drink": [(2, 3)],
-    "nap": [(2, 7)],
+    "back": [(2, 6)],
 }
-CENTER_ON_BOX = {"nap"}  # lying down: no head on top to center on
 
 # Per character: scale (source poses are ~240px tall) and whether walkLeft
 # is mirrored from walkRight — the baby's col-4 walking pose faces right.
@@ -94,10 +93,7 @@ def pose(r, c):
     return a
 
 
-def center_x(a, name):
-    xs = np.nonzero(a[..., 3].any(0))[0]
-    if name in CENTER_ON_BOX:
-        return (xs.min() + xs.max() + 1) / 2
+def center_x(a):
     top = a[: int(a.shape[0] * 0.35), :, 3]  # head, so swinging limbs don't jitter
     return np.nonzero(top)[1].mean()
 
@@ -105,8 +101,8 @@ def center_x(a, name):
 frames = {anim: [pose(r, c) for r, c in cells_] for anim, cells_ in ANIMATIONS.items()}
 if CHARACTERS[name]["mirror_walk"]:
     frames["walkLeft"] = [a[:, ::-1].copy() for a in frames["walkRight"]]
-half_w = max(max(cx, a.shape[1] - cx) for anim, fs in frames.items() for a in fs
-             for cx in [center_x(a, anim)])
+half_w = max(max(cx, a.shape[1] - cx) for fs in frames.values() for a in fs
+             for cx in [center_x(a)])
 frame_w = int(np.ceil(half_w * 2)) + PAD * 2
 frame_h = max(a.shape[0] for fs in frames.values() for a in fs) + PAD * 2
 cols = max(len(fs) for fs in frames.values())
@@ -116,7 +112,7 @@ sheet = Image.new("RGBA", (cols * frame_w, len(frames) * frame_h), (0, 0, 0, 0))
 meta = {"frameWidth": frame_w, "frameHeight": frame_h, "animations": {}}
 for r, (anim, fs) in enumerate(frames.items()):
     for c, a in enumerate(fs):
-        x = c * frame_w + round(frame_w / 2 - center_x(a, anim))
+        x = c * frame_w + round(frame_w / 2 - center_x(a))
         y = (r + 1) * frame_h - PAD - a.shape[0]
         sheet.alpha_composite(Image.fromarray(a), (x, y))
     meta["animations"][anim] = {"row": r, "frames": len(fs)}

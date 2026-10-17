@@ -29,7 +29,7 @@ const WALKER_STATES = {
   atDesk:   { anim: "drinkStand", wait: 40, next: "toCoffee" },     // sip sip
 };
 
-// The kid: wander → wave → sit with a drink → cheer → nap.
+// The kid: wander → wave → sit with a drink → cheer → look up at the clock.
 const KID_STATES = {
   toMiddle: { anim: "walkRight", target: "middle", hold: 2, next: "waving" },
   waving:   { anim: "wave", wait: 24, hold: 4, next: "toPlant" },
@@ -37,23 +37,23 @@ const KID_STATES = {
   sitting:  { anim: "sit", wait: 24, next: "drinking" },
   drinking: { anim: "drink", wait: 32, next: "toRug" },
   toRug:    { anim: "walkLeft", target: "rug", hold: 2, next: "cheering" },
-  cheering: { anim: "cheer", wait: 24, hold: 4, next: "napping" },
-  napping:  { anim: "nap", wait: 60, next: "toMiddle" },                 // zzz
+  cheering: { anim: "cheer", wait: 24, hold: 4, next: "clock" },
+  clock:    { anim: "back", wait: 40, next: "toMiddle" },                // what time is it?
 };
 
 // The girls' spots: the CENTER of each spot, as a fraction of canvas width.
 const KID_SPOTS = { rug: 0.4, middle: 0.55, plant: 0.72 };
 
-// The baby: toddle over → sit → bottle → cheer → toddle back → wave at the
-// window → long nap.
+// The baby: toddle over → sit → bottle → cheer → toddle back → wave, then
+// look out the window.
 const BABY_STATES = {
   toToys:   { anim: "walkRight", target: "toys", hold: 3, next: "playing" },
   playing:  { anim: "sit", wait: 40, next: "bottle" },
   bottle:   { anim: "drink", wait: 30, next: "cheering" },
   cheering: { anim: "cheer", wait: 20, hold: 4, next: "toWindow" },
   toWindow: { anim: "walkLeft", target: "window", hold: 3, next: "waving" },
-  waving:   { anim: "wave", wait: 24, hold: 5, next: "napping" },
-  napping:  { anim: "nap", wait: 80, next: "toToys" },                   // zzz
+  waving:   { anim: "wave", wait: 24, hold: 5, next: "window" },
+  window:   { anim: "back", wait: 60, next: "toToys" },                  // birds?
 };
 const BABY_SPOTS = { window: 0.28, toys: 0.46 };
 
